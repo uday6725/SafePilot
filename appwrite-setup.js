@@ -195,6 +195,9 @@ async function setup() {
       { type: "integer", key: "priority" },
     ]
   );
+  if (process.env.VITE_APPWRITE_COL_CONTACTS) {
+    await ensureCollectionPermissions(process.env.VITE_APPWRITE_COL_CONTACTS, ['read("users")','create("users")','update("users")','delete("users")']);
+  }
 
   // Optional: Users collection (used by Profile/Users pages)
   if (process.env.VITE_APPWRITE_COL_USERS) {
@@ -229,6 +232,7 @@ async function setup() {
         { type: "datetime", key: "createdAt" },
       ]
     );
+    await ensureCollectionPermissions(process.env.VITE_APPWRITE_COL_CARS, ['read("users")','create("users")','update("users")','delete("users")']);
   }
 
   if (process.env.VITE_APPWRITE_COL_DRIVER_PROFILES) {
@@ -247,6 +251,7 @@ async function setup() {
         { type: "datetime", key: "createdAt" },
       ]
     );
+    await ensureCollectionPermissions(process.env.VITE_APPWRITE_COL_DRIVER_PROFILES, ['read("users")','create("users")','update("users")','delete("users")']);
   }
 
   if (process.env.VITE_APPWRITE_COL_ASSIGNMENTS) {
@@ -263,6 +268,7 @@ async function setup() {
         { type: "datetime", key: "endedAt" },
       ]
     );
+    await ensureCollectionPermissions(process.env.VITE_APPWRITE_COL_ASSIGNMENTS, ['read("users")','create("users")','update("users")','delete("users")']);
   }
 
   if (process.env.VITE_APPWRITE_COL_DRIVER_RECORDS) {
@@ -278,6 +284,7 @@ async function setup() {
         { type: "datetime", key: "ts" },
       ]
     );
+    await ensureCollectionPermissions(process.env.VITE_APPWRITE_COL_DRIVER_RECORDS, ['read("users")','create("users")','update("users")','delete("users")']);
   }
 
   console.log("🎉 Setup complete.");
