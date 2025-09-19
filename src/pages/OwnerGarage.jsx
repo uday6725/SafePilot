@@ -115,41 +115,58 @@ export default function OwnerGarage() {
             <div className="space-y-3">
               {cars.map((c) => {
                 const active = activeAssignmentForCar(c.$id);
-                const availableDrivers = drivers; // could filter out currently assigned if needed
+                const availableDrivers = drivers;
                 return (
-                <div key={c.$id} className="grid grid-cols-2 md:grid-cols-12 gap-2 items-center bg-slate-900/60 border border-slate-800 rounded-xl p-3">
-                  <div className="col-span-2 md:col-span-2 text-slate-200">{c.alias || `${c.make} ${c.model}`}</div>
-                  <div className="text-slate-400">Plate: {c.plateNumber}</div>
-                  <div className="text-slate-400">VIN: {c.vin}</div>
-                  <div className="text-slate-400">Make: {c.make}</div>
-                  <div className="text-slate-400">Model: {c.model}</div>
-                  <div className="text-slate-400">Year: {c.year}</div>
-                  <div className="md:col-span-3 col-span-2">
-                    <div className="text-slate-400 text-xs mb-1">Driver Assignment</div>
-                    {active ? (
-                      <div className="flex items-center gap-2">
-                        <div className="text-slate-200 text-sm">Assigned: {drivers.find(d => d.$id === active.driverProfileId)?.name || active.driverProfileId}</div>
-                        {canEdit && <button disabled={assignBusy} onClick={() => doUnassign(active.$id)} className="px-2 py-1 rounded bg-amber-600/80 hover:bg-amber-600 border border-amber-500 text-xs">Unassign</button>}
+                  <div key={c.$id} className="bg-slate-900/60 border border-slate-800 rounded-xl p-4">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="text-slate-200 text-lg">
+                        {c.alias || `${c.make || '-'} ${c.model || ''}`}
                       </div>
-                    ) : (
-                      <div className="flex items-center gap-2">
-                        <select value={selectedByCar[c.$id] || ""} onChange={(e) => setSelectedByCar((m) => ({ ...m, [c.$id]: e.target.value }))} className="bg-slate-950 border border-slate-800 rounded px-2 py-1 text-sm flex-1">
-                          <option value="">Select driver</option>
-                          {availableDrivers.map((d) => (
-                            <option key={d.$id} value={d.$id}>{d.name || d.email}</option>
-                          ))}
-                        </select>
-                        {canEdit && <button disabled={assignBusy || !selectedByCar[c.$id]} onClick={() => doAssign(c.$id)} className="px-2 py-1 rounded bg-emerald-700/80 hover:bg-emerald-700 border border-emerald-600 text-xs">Assign</button>}
-                      </div>
-                    )}
-                  </div>
-                  {canEdit && (
-                    <div className="flex justify-end md:col-span-1 col-span-2">
-                      <button onClick={() => removeCar(c.$id)} className="px-3 py-1 rounded bg-rose-700/80 border border-rose-600">Delete</button>
+                      {canEdit && (
+                        <button onClick={() => removeCar(c.$id)} className="px-3 py-1 rounded bg-rose-700/80 border border-rose-600 text-sm">Delete</button>
+                      )}
                     </div>
-                  )}
-                </div>
-              );})}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3">
+                      <div className="space-y-1">
+                        <div className="text-slate-400 text-xs">Plate</div>
+                        <div className="text-slate-300 break-all">{c.plateNumber || '-'}</div>
+                        <div className="text-slate-400 text-xs mt-2">VIN</div>
+                        <div className="text-slate-300 break-all">{c.vin || '-'}</div>
+                      </div>
+                      <div className="space-y-1">
+                        <div className="text-slate-400 text-xs">Make</div>
+                        <div className="text-slate-300">{c.make || '-'}</div>
+                        <div className="text-slate-400 text-xs mt-2">Model</div>
+                        <div className="text-slate-300">{c.model || '-'}</div>
+                        <div className="text-slate-400 text-xs mt-2">Year</div>
+                        <div className="text-slate-300">{c.year || '-'}</div>
+                        <div className="text-slate-400 text-xs mt-2">Color</div>
+                        <div className="text-slate-300">{c.color || '-'}</div>
+                      </div>
+                      <div className="space-y-1">
+                        <div className="text-slate-400 text-xs">Driver Assignment</div>
+                        {active ? (
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-xs border border-emerald-500/40">Active</span>
+                            <div className="text-slate-200 text-sm">{drivers.find(d => d.$id === active.driverProfileId)?.name || drivers.find(d => d.$id === active.driverProfileId)?.email || active.driverProfileId}</div>
+                            {canEdit && <button disabled={assignBusy} onClick={() => doUnassign(active.$id)} className="px-2 py-1 rounded bg-amber-600/80 hover:bg-amber-600 border border-amber-500 text-xs">Unassign</button>}
+                          </div>
+                        ) : (
+                          <div className="flex flex-wrap items-center gap-2">
+                            <select value={selectedByCar[c.$id] || ""} onChange={(e) => setSelectedByCar((m) => ({ ...m, [c.$id]: e.target.value }))} className="bg-slate-950 border border-slate-800 rounded px-2 py-1 text-sm">
+                              <option value="">Select driver</option>
+                              {availableDrivers.map((d) => (
+                                <option key={d.$id} value={d.$id}>{d.name || d.email}</option>
+                              ))}
+                            </select>
+                            {canEdit && <button disabled={assignBusy || !selectedByCar[c.$id]} onClick={() => doAssign(c.$id)} className="px-2 py-1 rounded bg-emerald-700/80 hover:bg-emerald-700 border border-emerald-600 text-xs">Assign</button>}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
               {cars.length === 0 && <div className="text-slate-500">No cars yet.</div>}
             </div>
           )}
