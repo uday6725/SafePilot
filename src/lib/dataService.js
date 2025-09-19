@@ -1,6 +1,6 @@
 import { ID, Query } from "appwrite";
 import { databases } from "./appwrite";
-import { DB_ID, COL_ALERTS, COL_SENSORS, COL_LOCATIONS, COL_CONTACTS, assertCollections } from "./collections";
+import { DB_ID, COL_ALERTS, COL_SENSORS, COL_LOCATIONS, COL_CONTACTS, COL_USERS, assertCollections } from "./collections";
 
 export async function seedMockData() {
   assertCollections();
@@ -113,4 +113,17 @@ export async function upsertContact(doc) {
 export async function deleteContact(id) {
   assertCollections();
   return databases.deleteDocument(DB_ID, COL_CONTACTS, id);
+}
+
+// Optional: Users collection (for admin listing on client)
+export async function listUsers(limit = 100) {
+  if (!COL_USERS) throw new Error("VITE_APPWRITE_COL_USERS not configured");
+  const res = await databases.listDocuments(DB_ID, COL_USERS, [Query.limit(limit)]);
+  return res.documents;
+}
+
+export async function upsertUser(doc) {
+  if (!COL_USERS) throw new Error("VITE_APPWRITE_COL_USERS not configured");
+  if (doc.$id) return databases.updateDocument(DB_ID, COL_USERS, doc.$id, doc);
+  return databases.createDocument(DB_ID, COL_USERS, ID.unique(), doc);
 }

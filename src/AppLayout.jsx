@@ -11,9 +11,12 @@ import LocationPage from "./pages/Location";
 import AdminPage from "./pages/Admin";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { seedMockData } from "./lib/dataService";
+import UsersPage from "./pages/Users";
+import Records from "./pages/Records";
+import Profile from "./pages/Profile";
 
 function Layout() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, role } = useAuth();
   useEffect(() => {
     if (!isAuthenticated) return;
     const enableSeed = import.meta.env.VITE_ENABLE_CLIENT_SEED === 'true';
@@ -22,18 +25,22 @@ function Layout() {
       seedMockData().catch(console.warn);
     }
   }, [isAuthenticated]);
+  const home = role === 'driver' ? '/dashboard' : '/dashboard';
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
       {isAuthenticated && <Navbar />}
       <Routes>
         <Route path="/login" element={<Login />} />
-        <Route path="/dashboard" element={<ProtectedRoute allowedRoles={["admin","user"]}><Dashboard /></ProtectedRoute>} />
-        <Route path="/alerts" element={<ProtectedRoute allowedRoles={["admin","user"]}><Alerts /></ProtectedRoute>} />
+        <Route path="/dashboard" element={<ProtectedRoute allowedRoles={["admin","owner","driver"]}><Dashboard /></ProtectedRoute>} />
+        <Route path="/alerts" element={<ProtectedRoute allowedRoles={["admin","owner","driver"]}><Alerts /></ProtectedRoute>} />
         <Route path="/controls" element={<ControlsPage />} />
-        <Route path="/location" element={<ProtectedRoute allowedRoles={["admin","user"]}><LocationPage /></ProtectedRoute>} />
+        <Route path="/location" element={<ProtectedRoute allowedRoles={["admin","owner"]}><LocationPage /></ProtectedRoute>} />
         <Route path="/admin" element={<ProtectedRoute allowedRoles={["admin"]}><AdminPage /></ProtectedRoute>} />
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
-        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        <Route path="/users" element={<ProtectedRoute allowedRoles={["admin"]}><UsersPage /></ProtectedRoute>} />
+        <Route path="/records" element={<ProtectedRoute allowedRoles={["driver"]}><Records /></ProtectedRoute>} />
+        <Route path="/profile" element={<ProtectedRoute allowedRoles={["driver","owner","admin"]}><Profile /></ProtectedRoute>} />
+        <Route path="/" element={<Navigate to={home} replace />} />
+        <Route path="*" element={<Navigate to={home} replace />} />
       </Routes>
     </div>
   );

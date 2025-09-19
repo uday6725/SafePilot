@@ -12,12 +12,25 @@ export default function Navbar() {
         <Link to="/dashboard" className="text-xl font-semibold text-cyan-400">SafePilot</Link>
         <nav className="flex gap-1 items-center">
           <NavLink to="/dashboard" className={linkCls}>Dashboard</NavLink>
+          {(role === "admin" || role === "owner") && (
+            <NavLink to="/location" className={linkCls}>Location</NavLink>
+          )}
           <NavLink to="/alerts" className={linkCls}>Alerts</NavLink>
-          <NavLink to="/location" className={linkCls}>Location</NavLink>
-          {role === "admin" && <>
+          {(role === "admin" || role === "owner") && (
             <NavLink to="/controls" className={linkCls}>Controls</NavLink>
-            <NavLink to="/admin" className={linkCls}>Admin</NavLink>
-          </>}
+          )}
+          {role === "admin" && (
+            <>
+              <NavLink to="/admin" className={linkCls}>Admin</NavLink>
+              <NavLink to="/users" className={linkCls}>Users</NavLink>
+            </>
+          )}
+          {role === "driver" && (
+            <>
+              <NavLink to="/records" className={linkCls}>Records</NavLink>
+              <NavLink to="/profile" className={linkCls}>Profile</NavLink>
+            </>
+          )}
         </nav>
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2 text-sm text-slate-400">
