@@ -136,8 +136,13 @@ export async function listCars({ ownerId, limit = 100 } = {}) {
   return res.documents;
 }
 export async function upsertCar(doc) {
-  if (doc.$id) return databases.updateDocument(DB_ID, COL_CARS, doc.$id, doc);
-  return databases.createDocument(DB_ID, COL_CARS, ID.unique(), doc);
+  const payload = { ...doc };
+  if (payload.year !== undefined && payload.year !== null && payload.year !== "") {
+    const yr = parseInt(payload.year, 10);
+    if (Number.isFinite(yr)) payload.year = yr; else delete payload.year;
+  }
+  if (doc.$id) return databases.updateDocument(DB_ID, COL_CARS, doc.$id, payload);
+  return databases.createDocument(DB_ID, COL_CARS, ID.unique(), payload);
 }
 export async function deleteCar(id) {
   return databases.deleteDocument(DB_ID, COL_CARS, id);
@@ -175,10 +180,11 @@ export async function listAssignments({ ownerId, carId, driverProfileId, limit =
   return res.documents;
 }
 export async function assignDriver({ ownerId, carId, driverProfileId, active = true }) {
-  return databases.createDocument(DB_ID, COL_ASSIGNMENTS, ID.unique(), { ownerId, carId, driverProfileId, active, ts: new Date().toISOString() });
+  const activeInt = active ? 1 : 0;
+  return databases.createDocument(DB_ID, COL_ASSIGNMENTS, ID.unique(), { ownerId, carId, driverProfileId, active: activeInt, ts: new Date().toISOString() });
 }
 export async function unassignDriver(assignmentId) {
-  return databases.updateDocument(DB_ID, COL_ASSIGNMENTS, assignmentId, { active: false, endedAt: new Date().toISOString() });
+  return databases.updateDocument(DB_ID, COL_ASSIGNMENTS, assignmentId, { active: 0, endedAt: new Date().toISOString() });
 }
 
 // Driver records (historical incidents)
