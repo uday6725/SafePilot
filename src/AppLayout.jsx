@@ -16,8 +16,11 @@ function Layout() {
   const { isAuthenticated } = useAuth();
   useEffect(() => {
     if (!isAuthenticated) return;
-    // Fire and forget; errors will be visible in console for now
-    seedMockData().catch(console.warn);
+    const enableSeed = import.meta.env.VITE_ENABLE_CLIENT_SEED === 'true';
+    if (enableSeed) {
+      // Fire and forget; errors will be visible in console for now
+      seedMockData().catch(console.warn);
+    }
   }, [isAuthenticated]);
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">

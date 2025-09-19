@@ -18,6 +18,19 @@ export default function LocationPage() {
     })();
   }, []);
 
+  // Append live location updates to the path (rolling window of 300 points)
+  useEffect(() => {
+    const loc = sensorData?.location;
+    if (!loc || typeof loc.lat !== 'number' || typeof loc.lng !== 'number') return;
+    setPath((prev) => {
+      const last = prev[prev.length - 1];
+      if (last && Math.abs(last.lat - loc.lat) < 1e-6 && Math.abs(last.lng - loc.lng) < 1e-6) return prev;
+      const next = [...prev, loc];
+      if (next.length > 300) next.shift();
+      return next;
+    });
+  }, [sensorData]);
+
   const current = useMemo(() => sensorData?.location || path[path.length - 1], [sensorData, path]);
 
   return (

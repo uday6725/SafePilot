@@ -6,9 +6,10 @@ import SensorCard from "../components/SensorCard";
 import AlertsFeed from "../components/AlertsFeed";
 import { useSocket } from "../context/WebSocketContext";
 import { getLatestSensor, getRecentAlerts } from "../lib/dataService";
+import Sparkline from "../components/Sparkline";
 
 export default function Dashboard() {
-  const { sensorData, setSensorData, setAlerts } = useSocket();
+  const { sensorData, setSensorData, setAlerts, history } = useSocket();
 
   const status = useMemo(() => {
     if (sensorData.alcoholLevel >= 60) return "Critical";
@@ -42,6 +43,15 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
       <div className="max-w-7xl mx-auto px-4 py-6 space-y-6">
+        {typeof Notification !== 'undefined' && Notification.permission !== 'granted' && (
+          <div className="rounded-xl border border-sky-500/50 bg-sky-500/10 p-4 flex items-center justify-between">
+            <div>
+              <div className="text-sky-300 font-semibold">Enable Notifications</div>
+              <div className="text-slate-300 text-sm">Get browser notifications for critical alerts in real time.</div>
+            </div>
+            <button onClick={() => Notification.requestPermission()} className="px-4 py-2 rounded-md bg-sky-600 hover:bg-sky-500 text-white">Allow</button>
+          </div>
+        )}
         {sensorData.alcoholLevel >= 60 && (
           <div className="rounded-xl border border-rose-500/60 bg-rose-500/10 p-4 flex items-center justify-between">
             <div>
@@ -65,6 +75,12 @@ export default function Dashboard() {
               <SensorCard label="Drowsiness" value={sensorData.drowsiness} unit="%" color="amber" />
               <SensorCard label="Alcohol Level" value={sensorData.alcoholLevel} unit="%" color={sensorData.alcoholLevel >= 60 ? "rose" : "amber"} />
               <SensorCard label="Proximity" value={sensorData.proximity} unit="cm" color={sensorData.proximity < 20 ? "rose" : "sky"} />
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-3">
+              <div className="bg-slate-900/40 border border-slate-800 rounded-xl p-3"><Sparkline data={history.heartRate} color="#34d399" /></div>
+              <div className="bg-slate-900/40 border border-slate-800 rounded-xl p-3"><Sparkline data={history.drowsiness} color="#fbbf24" /></div>
+              <div className="bg-slate-900/40 border border-slate-800 rounded-xl p-3"><Sparkline data={history.alcoholLevel} color="#f87171" /></div>
+              <div className="bg-slate-900/40 border border-slate-800 rounded-xl p-3"><Sparkline data={history.proximity} color="#38bdf8" /></div>
             </div>
           </div>
           <AlertsFeed />
