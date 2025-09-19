@@ -1,13 +1,17 @@
 import { useEffect, useState } from "react";
 import ProtectedRoute from "../components/ProtectedRoute";
 import { useAuth } from "../context/AuthContext";
-import { deleteCar, listCars, upsertCar } from "../lib/dataService";
+import { deleteCar, listCars, upsertCar, listDriverProfiles, listAssignments, assignDriver, unassignDriver } from "../lib/dataService";
 
 export default function OwnerGarage() {
   const { user, role } = useAuth();
   const [cars, setCars] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [drivers, setDrivers] = useState([]);
+  const [assignments, setAssignments] = useState([]);
+  const [assignBusy, setAssignBusy] = useState(false);
+  const [selectedByCar, setSelectedByCar] = useState({}); // { [carId]: driverProfileId }
 
   const [form, setForm] = useState({ alias: "", plateNumber: "", vin: "", make: "", model: "", year: "", color: "" });
   const canEdit = role === "owner" || role === "admin";
@@ -16,10 +20,16 @@ export default function OwnerGarage() {
     (async () => {
       setLoading(true);
       try {
-        const docs = await listCars({ ownerId: user?.$id });
-        setCars(docs);
+        const [carsRes, driversRes, assignsRes] = await Promise.all([
+          listCars({ ownerId: user?.$id }),
+          listDriverProfiles({ ownerId: user?.$id }),
+          listAssignments({ ownerId: user?.$id }),
+        ]);
+        setCars(carsRes);
+        setDrivers(driversRes);
+        setAssignments(assignsRes);
       } catch (e) {
-        setError(e?.message || "Failed to load cars. Check permissions and env IDs.");
+        setError(e?.message || "Failed to load garage data. Check permissions and env IDs.");
       } finally {
         setLoading(false);
       }
@@ -47,6 +57,38 @@ export default function OwnerGarage() {
     }
   }
 
+  function activeAssignmentForCar(carId) {
+    return assignments.find((a) => a.carId === carId && (a.active === 1 || a.active === true));
+  }
+
+  async function doAssign(carId) {
+    const driverProfileId = selectedByCar[carId];
+    if (!driverProfileId) return;
+    setAssignBusy(true);
+    try {
+      const created = await assignDriver({ ownerId: user.$id, carId, driverProfileId });
+      setAssignments((prev) => [created, ...prev]);
+      // clear local select
+      setSelectedByCar((m) => ({ ...m, [carId]: "" }));
+    } catch (e) {
+      setError(e?.message || "Failed to assign driver");
+    } finally {
+      setAssignBusy(false);
+    }
+  }
+
+  async function doUnassign(assignId) {
+    setAssignBusy(true);
+    try {
+      const ended = await unassignDriver(assignId);
+      setAssignments((prev) => prev.map((a) => (a.$id === assignId ? ended : a)));
+    } catch (e) {
+      setError(e?.message || "Failed to unassign driver");
+    } finally {
+      setAssignBusy(false);
+    }
+  }
+
   return (
     <ProtectedRoute allowedRoles={["owner","admin"]}>
       <div className="min-h-screen bg-slate-950 text-slate-100">
@@ -71,21 +113,43 @@ export default function OwnerGarage() {
             <div className="text-slate-400">Loading...</div>
           ) : (
             <div className="space-y-3">
-              {cars.map((c) => (
-                <div key={c.$id} className="grid grid-cols-2 md:grid-cols-8 gap-2 items-center bg-slate-900/60 border border-slate-800 rounded-xl p-3">
+              {cars.map((c) => {
+                const active = activeAssignmentForCar(c.$id);
+                const availableDrivers = drivers; // could filter out currently assigned if needed
+                return (
+                <div key={c.$id} className="grid grid-cols-2 md:grid-cols-12 gap-2 items-center bg-slate-900/60 border border-slate-800 rounded-xl p-3">
                   <div className="col-span-2 md:col-span-2 text-slate-200">{c.alias || `${c.make} ${c.model}`}</div>
                   <div className="text-slate-400">Plate: {c.plateNumber}</div>
                   <div className="text-slate-400">VIN: {c.vin}</div>
                   <div className="text-slate-400">Make: {c.make}</div>
                   <div className="text-slate-400">Model: {c.model}</div>
                   <div className="text-slate-400">Year: {c.year}</div>
+                  <div className="md:col-span-3 col-span-2">
+                    <div className="text-slate-400 text-xs mb-1">Driver Assignment</div>
+                    {active ? (
+                      <div className="flex items-center gap-2">
+                        <div className="text-slate-200 text-sm">Assigned: {drivers.find(d => d.$id === active.driverProfileId)?.name || active.driverProfileId}</div>
+                        {canEdit && <button disabled={assignBusy} onClick={() => doUnassign(active.$id)} className="px-2 py-1 rounded bg-amber-600/80 hover:bg-amber-600 border border-amber-500 text-xs">Unassign</button>}
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <select value={selectedByCar[c.$id] || ""} onChange={(e) => setSelectedByCar((m) => ({ ...m, [c.$id]: e.target.value }))} className="bg-slate-950 border border-slate-800 rounded px-2 py-1 text-sm flex-1">
+                          <option value="">Select driver</option>
+                          {availableDrivers.map((d) => (
+                            <option key={d.$id} value={d.$id}>{d.name || d.email}</option>
+                          ))}
+                        </select>
+                        {canEdit && <button disabled={assignBusy || !selectedByCar[c.$id]} onClick={() => doAssign(c.$id)} className="px-2 py-1 rounded bg-emerald-700/80 hover:bg-emerald-700 border border-emerald-600 text-xs">Assign</button>}
+                      </div>
+                    )}
+                  </div>
                   {canEdit && (
-                    <div className="flex justify-end">
+                    <div className="flex justify-end md:col-span-1 col-span-2">
                       <button onClick={() => removeCar(c.$id)} className="px-3 py-1 rounded bg-rose-700/80 border border-rose-600">Delete</button>
                     </div>
                   )}
                 </div>
-              ))}
+              );})}
               {cars.length === 0 && <div className="text-slate-500">No cars yet.</div>}
             </div>
           )}
