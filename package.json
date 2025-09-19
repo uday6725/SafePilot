@@ -7,14 +7,22 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "mock-server": "node server.js"
   },
   "dependencies": {
     "@appwrite.io/pink-icons": "^1.0.0",
     "@tailwindcss/vite": "^4.0.14",
     "appwrite": "^17.0.0",
+    "leaflet": "^1.9.4",
+    "lucide-react": "^0.544.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "react-leaflet": "^5.0.0",
+    "react-router-dom": "^7.9.1",
+    "react-webcam": "^7.2.0",
+    "socket.io-client": "^4.8.1",
+    "socket.io": "^4.8.1",
     "tailwindcss": "^4.0.14"
   },
   "devDependencies": {
