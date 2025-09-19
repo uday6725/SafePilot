@@ -33,6 +33,7 @@ async function setup() {
         console.log(`ℹ️ Collection ${name} already exists`);
       } else throw err;
     }
+
     for (const attr of attributes) {
       const { type, key, required = false, array = false, size, defaultValue } = attr;
       try {
@@ -112,6 +113,30 @@ async function setup() {
     }
   }
 
+  async function ensureCollectionPermissions(collectionId, permissions) {
+    // permissions format example: [ 'read("users")', 'create("users")', 'update("users")', 'delete("users")' ]
+    try {
+      // fetch existing collection to preserve required fields like name and documentSecurity
+      const col = await databases.getCollection({ databaseId, collectionId });
+      await databases.updateCollection({
+        databaseId,
+        collectionId,
+        name: col.name,
+        permissions,
+        documentSecurity: col.documentSecurity,
+      });
+      console.log(`   🔐 Permissions updated for ${collectionId}`);
+    } catch (err) {
+      if (err.code === 404) {
+        console.log(`   ℹ️ Skipped permissions for missing collection ${collectionId}`);
+      } else if (err.code === 409) {
+        console.log(`   ℹ️ Permissions already set for ${collectionId}`);
+      } else {
+        console.error(`   ❌ Permissions update failed for ${collectionId}:`, err.message);
+      }
+    }
+  }
+
   // Collections
 
   await createCollectionWithAttributes(
@@ -128,6 +153,7 @@ async function setup() {
   );
   if (process.env.VITE_APPWRITE_COL_ALERTS) {
     await createIndexIfMissing(process.env.VITE_APPWRITE_COL_ALERTS, 'ts_desc', 'key', ['ts'], ['DESC']);
+    await ensureCollectionPermissions(process.env.VITE_APPWRITE_COL_ALERTS, ['read("users")']);
   }
 
   await createCollectionWithAttributes(
@@ -183,6 +209,7 @@ async function setup() {
       ]
     );
     await createIndexIfMissing(process.env.VITE_APPWRITE_COL_USERS, 'email_eq', 'key', ['email']);
+    await ensureCollectionPermissions(process.env.VITE_APPWRITE_COL_USERS, ['read("users")','create("users")','update("users")','delete("users")']);
   }
 
   // Owner–Car–Driver model
