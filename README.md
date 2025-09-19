@@ -82,163 +82,23 @@ Permissions are configured for authenticated users with appropriate read/write a
 
 SafePilot addresses critical road safety challenges by creating an integrated IoT ecosystem that prevents impaired and drowsy driving through multi-layered verification and real-time monitoring. The system empowers vehicle owners with remote oversight capabilities while maintaining driver privacy and providing immediate emergency response protocols.
 
-## Architecture (Figure)
+## Diagram Gallery (Public)
 
-![System Architecture](./public/architecture.png)
+- System Architecture
 
-## UML Diagrams
+  ![System Architecture (public)](./public/system-architecture.png)
 
-### 1) Component Diagram
+- Component Diagram
 
-```mermaid
-flowchart TD
-  subgraph Edge[IoT Edge (Vehicle)]
-    RFID[RFID / Fingerprint]
-    Alcohol[Alcohol Sensor (MQ-3)]
-    HR[Heart Rate (MAX30102)]
-    Prox[Proximity (HC-SR04)]
-    Cam[Camera]
-    Python[Python Drowsiness Engine]
-    MCU[ESP32 / RPi Controller]
+  ![Component Diagram](./public/component-diagram.png)
 
-    RFID --> MCU
-    Alcohol --> MCU
-    HR --> MCU
-    Prox --> MCU
-    Cam --> Python
-    Python --> MCU
-  end
+- Sequence Diagram
 
-  subgraph Backend[Realtime + Data]
-    Socket[Socket.IO Server]
-    Appwrite[(Appwrite Cloud)]
-  end
+  ![Sequence Diagram](./public/sequence-diagram.png)
 
-  subgraph Web[Web Application]
-    React[React + Vite]
-    Context[WebSocketContext.jsx]
-    DataSvc[dataService.js]
-    OwnerUI[Owner Garage/Drivers]
-    Controls[Remote Controls]
-    Dashboard[Dashboards]
-  end
+- State Machine Diagram
 
-  MCU -- sensor_data/auth_event/emergency_event --> Socket
-  Socket -- WebSocket --> Context
-  Context --> Dashboard
-  Context --> Controls
-  Context --> OwnerUI
-  DataSvc <---> Appwrite
-  React --> DataSvc
-```
+  ![State Machine Diagram](./public/state-machine-diagram.png)
 
-### 2) End-to-End Flow (Sequence)
 
-```mermaid
-sequenceDiagram
-  participant Owner as Owner (Web)
-  participant Web as React App
-  participant WS as Socket.IO Server
-  participant Edge as MCU/Python (IoT)
-  participant DB as Appwrite DB
 
-  Owner->>Web: Add Driver Profile
-  Web->>DB: create DriverProfiles(ownerId, name, ...)
-  DB-->>Web: 201 Created
-
-  Owner->>Web: Add Car
-  Web->>DB: create Cars(ownerId, plate, vin, year:int, ...)
-  DB-->>Web: 201 Created
-
-  Owner->>Web: Assign Driver -> Car
-  Web->>DB: create Assignments(ownerId, carId, driverProfileId, active:1, ts)
-  DB-->>Web: 201 Created
-
-  Edge->>WS: auth_event{ verified, method, driver, car, ts }
-  WS-->>Web: auth_event
-  Web->>Web: ignition.ready = verified
-
-  Edge->>WS: sensor_data{ heartRate, alcoholLevel, drowsiness, ... }
-  WS-->>Web: sensor_data
-  Web->>DB: (optional) add DriverRecords if thresholds crossed
-
-  alt Alcohol >= 60 or Drowsiness Critical
-    Edge->>WS: emergency_event{ alcoholLevel, heartRate, driver, car, location, ts }
-    WS-->>Web: emergency_event (also new_alert)
-    Web->>Web: remoteControl.enabled = true
-    Owner->>Web: Send remote commands (park/lock/hazard)
-    Web->>WS: control_command{ command, speed? }
-    WS-->>Edge: control_command
-  end
-```
-
-### 3) Data Model (Class Diagram)
-
-```mermaid
-classDiagram
-  class Cars {
-    string $id
-    string ownerId
-    string alias
-    string plateNumber
-    string vin
-    string make
-    string model
-    int    year
-    string color
-    datetime createdAt
-  }
-
-  class DriverProfiles {
-    string $id
-    string ownerId
-    string name
-    string email
-    string phone
-    string licenseNo
-    string backgroundNotes
-    int    violations
-    datetime lastMedicalCheck
-    datetime createdAt
-  }
-
-  class Assignments {
-    string $id
-    string ownerId
-    string carId
-    string driverProfileId
-    int    active  // 0 or 1
-    datetime ts
-    datetime endedAt
-  }
-
-  class DriverRecords {
-    string $id
-    string driverProfileId
-    string type
-    string level
-    string title
-    string description
-    datetime ts
-  }
-
-  Cars "1" <-- "0..*" Assignments
-  DriverProfiles "1" <-- "0..*" Assignments
-  DriverProfiles "1" <-- "0..*" DriverRecords
-```
-
-### 4) Runtime States (State Machine)
-
-```mermaid
-stateDiagram-v2
-  [*] --> AwaitVerification
-  AwaitVerification --> IgnitionReady: auth_event{ verified: true }
-  AwaitVerification --> IgnitionBlocked: auth_event{ verified: false }
-
-  IgnitionReady --> Normal
-  IgnitionBlocked --> [*]
-
-  Normal --> Warning: alcohol>0 || drowsiness>60
-  Warning --> Critical: alcohol>=60 || drowsiness>=80
-  Critical --> RemoteControlEnabled: emergency_event
-  RemoteControlEnabled --> Normal: conditions_normal
