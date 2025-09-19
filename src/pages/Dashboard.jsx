@@ -5,9 +5,10 @@ import DriverStatusCard from "../components/DriverStatusCard";
 import SensorCard from "../components/SensorCard";
 import AlertsFeed from "../components/AlertsFeed";
 import { useSocket } from "../context/WebSocketContext";
+import { getLatestSensor, getRecentAlerts } from "../lib/dataService";
 
 export default function Dashboard() {
-  const { sensorData } = useSocket();
+  const { sensorData, setSensorData, setAlerts } = useSocket();
 
   const status = useMemo(() => {
     if (sensorData.alcoholLevel >= 60) return "Critical";
@@ -18,6 +19,25 @@ export default function Dashboard() {
   useEffect(() => {
     // Placeholder for any side-effects when status changes
   }, [status]);
+
+  useEffect(() => {
+    // Prefetch from Appwrite (one-time on mount)
+    (async () => {
+      try {
+        const [latest, alerts] = await Promise.all([
+          getLatestSensor().catch(() => null),
+          getRecentAlerts(50).catch(() => []),
+        ]);
+        if (latest) setSensorData((prev) => ({ ...prev, ...latest }));
+        if (alerts?.length) {
+          setAlerts(alerts.map((a) => ({ id: a.$id, ts: a.ts, level: a.level, title: a.title, description: a.description })));
+        }
+      } catch (e) {
+        // Non-blocking: show real-time data even if Appwrite prefetch fails
+        console.warn("Prefetch failed", e);
+      }
+    })();
+  }, [setSensorData, setAlerts]);
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">

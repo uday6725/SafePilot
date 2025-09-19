@@ -1,14 +1,22 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSocket } from "../context/WebSocketContext";
 import MapView from "../components/MapView";
+import { getPath } from "../lib/dataService";
 
 export default function LocationPage() {
   const { sensorData } = useSocket();
-  const [path] = useState(() => [
-    { lat: 19.076, lng: 72.8777 },
-    { lat: 19.08, lng: 72.882 },
-    { lat: 19.084, lng: 72.888 },
-  ]);
+  const [path, setPath] = useState([]);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const p = await getPath(200);
+        if (Array.isArray(p) && p.length) setPath(p);
+      } catch (e) {
+        console.warn("Failed to fetch path", e);
+      }
+    })();
+  }, []);
 
   const current = useMemo(() => sensorData?.location || path[path.length - 1], [sensorData, path]);
 

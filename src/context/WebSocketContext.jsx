@@ -47,7 +47,7 @@ export function WebSocketProvider({ children }) {
     socketRef.current.emit("control_command", { command, ...data });
   }
 
-  const value = useMemo(() => ({ connected, sensorData, setSensorData, alerts, sendCommand }), [connected, sensorData, alerts]);
+  const value = useMemo(() => ({ connected, sensorData, setSensorData, alerts, setAlerts, sendCommand }), [connected, sensorData, alerts]);
 
   return <WebSocketContext.Provider value={value}>{children}</WebSocketContext.Provider>;
 }

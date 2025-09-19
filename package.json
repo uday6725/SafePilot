@@ -8,21 +8,25 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "mock-server": "node server.js"
+    "mock-server": "node server.js",
+    "appwrite-setup": "node appwrite-setup.js",
+    "appwrite-insert-data": "node appwrite-insert-data.js"
   },
   "dependencies": {
     "@appwrite.io/pink-icons": "^1.0.0",
     "@tailwindcss/vite": "^4.0.14",
     "appwrite": "^17.0.0",
+    "dotenv": "^17.2.2",
     "leaflet": "^1.9.4",
     "lucide-react": "^0.544.0",
+    "node-appwrite": "^19.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-leaflet": "^5.0.0",
     "react-router-dom": "^7.9.1",
     "react-webcam": "^7.2.0",
-    "socket.io-client": "^4.8.1",
     "socket.io": "^4.8.1",
+    "socket.io-client": "^4.8.1",
     "tailwindcss": "^4.0.14"
   },
   "devDependencies": {

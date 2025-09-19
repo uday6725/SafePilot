@@ -1,4 +1,5 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { useEffect } from "react";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { WebSocketProvider } from "./context/WebSocketContext";
 import Navbar from "./components/Navbar";
@@ -9,9 +10,15 @@ import ControlsPage from "./pages/Controls";
 import LocationPage from "./pages/Location";
 import AdminPage from "./pages/Admin";
 import ProtectedRoute from "./components/ProtectedRoute";
+import { seedMockData } from "./lib/dataService";
 
 function Layout() {
   const { isAuthenticated } = useAuth();
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    // Fire and forget; errors will be visible in console for now
+    seedMockData().catch(console.warn);
+  }, [isAuthenticated]);
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
       {isAuthenticated && <Navbar />}
