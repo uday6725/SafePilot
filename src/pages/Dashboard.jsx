@@ -2,11 +2,14 @@ import { useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import DriverStatusCard from "../components/DriverStatusCard";
 import AlertsFeed from "../components/AlertsFeed";
+import Sparkline from "../components/Sparkline";
 import { useSocket } from "../context/WebSocketContext";
+import { useAuth } from "../context/AuthContext";
 import { getLatestSensor, getRecentAlerts } from "../lib/dataService";
 
 export default function Dashboard() {
-  const { sensorData, setSensorData, setAlerts } = useSocket();
+  const { role } = useAuth();
+  const { sensorData, setSensorData, setAlerts, history, connected, ignition, remoteControl, authEvent } = useSocket();
 
   const status = useMemo(() => {
     if (sensorData.alcoholLevel >= 60) return "Critical";
@@ -59,9 +62,85 @@ export default function Dashboard() {
           </div>
         )}
 
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-4">
+            <div className="text-slate-400 text-xs">Heart Rate</div>
+            <div className="text-slate-100 text-2xl">{sensorData.heartRate ?? '-'} <span className="text-slate-400 text-sm">bpm</span></div>
+            <div className="mt-2"><Sparkline data={history.heartRate} color="#22d3ee" /></div>
+          </div>
+          <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-4">
+            <div className="text-slate-400 text-xs">Alcohol</div>
+            <div className="text-slate-100 text-2xl">{sensorData.alcoholLevel ?? '-'} <span className="text-slate-400 text-sm">%</span></div>
+            <div className="mt-2"><Sparkline data={history.alcoholLevel} color="#f472b6" /></div>
+          </div>
+          <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-4">
+            <div className="text-slate-400 text-xs">Speed</div>
+            <div className="text-slate-100 text-2xl">{sensorData.speed ?? '-'} <span className="text-slate-400 text-sm">km/h</span></div>
+            <div className="mt-2"><Sparkline data={history.proximity} color="#a3e635" /></div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-4">
+            <div className="text-slate-400 text-xs">Connection</div>
+            <div className={`text-lg ${connected ? 'text-emerald-300' : 'text-rose-300'}`}>{connected ? 'Connected' : 'Disconnected'}</div>
+          </div>
+          <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-4">
+            <div className="text-slate-400 text-xs">Ignition</div>
+            <div className={`text-lg ${ignition?.ready ? 'text-emerald-300' : 'text-rose-300'}`}>{ignition?.ready ? 'Ready' : 'Blocked'}</div>
+            {ignition?.reason && <div className="text-slate-500 text-xs">{ignition.reason}</div>}
+          </div>
+          <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-4">
+            <div className="text-slate-400 text-xs">Remote Control</div>
+            <div className={`text-lg ${remoteControl?.enabled ? 'text-emerald-300' : 'text-slate-300'}`}>{remoteControl?.enabled ? 'Enabled' : 'Disabled'}</div>
+            {remoteControl?.reason && <div className="text-slate-500 text-xs">{remoteControl.reason}</div>}
+          </div>
+          <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-4">
+            <div className="text-slate-400 text-xs">Driver Verification</div>
+            <div className={`text-lg ${authEvent?.verified ? 'text-emerald-300' : 'text-slate-300'}`}>{authEvent?.verified ? 'Verified' : 'Pending'}</div>
+            {authEvent?.method && <div className="text-slate-500 text-xs">{authEvent.method}</div>}
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-2 space-y-4">
             <DriverStatusCard status={status} message={status === "Normal" ? "All sensors nominal" : status === "Warning" ? "Potential risk detected" : "Immediate attention required"} />
+
+            {/* Quick actions depending on role */}
+            {role === 'admin' && (
+              <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-4">
+                <div className="text-slate-300 mb-2">Admin Shortcuts</div>
+                <div className="flex flex-wrap gap-2">
+                  <Link to="/admin" className="px-3 py-2 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-100">Project Admin</Link>
+                  <Link to="/users" className="px-3 py-2 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-100">Users</Link>
+                  <Link to="/location" className="px-3 py-2 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-100">Locations</Link>
+                  <Link to="/controls" className="px-3 py-2 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-100">Controls</Link>
+                </div>
+              </div>
+            )}
+
+            {role === 'owner' && (
+              <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-4">
+                <div className="text-slate-300 mb-2">Owner Shortcuts</div>
+                <div className="flex flex-wrap gap-2">
+                  <Link to="/garage" className="px-3 py-2 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-100">Garage</Link>
+                  <Link to="/owner-drivers" className="px-3 py-2 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-100">Drivers</Link>
+                  <Link to="/location" className="px-3 py-2 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-100">Locations</Link>
+                  <Link to="/controls" className="px-3 py-2 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-100">Controls</Link>
+                </div>
+              </div>
+            )}
+
+            {role === 'driver' && (
+              <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-4">
+                <div className="text-slate-300 mb-2">Driver Shortcuts</div>
+                <div className="flex flex-wrap gap-2">
+                  <Link to="/records" className="px-3 py-2 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-100">My Records</Link>
+                  <Link to="/profile" className="px-3 py-2 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-100">Profile</Link>
+                  <Link to="/alerts" className="px-3 py-2 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-100">Alerts</Link>
+                </div>
+              </div>
+            )}
           </div>
           <AlertsFeed />
         </div>
