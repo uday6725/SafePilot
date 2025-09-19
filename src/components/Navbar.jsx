@@ -15,6 +15,12 @@ export default function Navbar() {
           {(role === "admin" || role === "owner") && (
             <NavLink to="/location" className={linkCls}>Location</NavLink>
           )}
+          {role === "owner" && (
+            <>
+              <NavLink to="/garage" className={linkCls}>Garage</NavLink>
+              <NavLink to="/owner-drivers" className={linkCls}>Drivers</NavLink>
+            </>
+          )}
           <NavLink to="/alerts" className={linkCls}>Alerts</NavLink>
           {(role === "admin" || role === "owner") && (
             <NavLink to="/controls" className={linkCls}>Controls</NavLink>

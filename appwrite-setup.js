@@ -33,7 +33,6 @@ async function setup() {
         console.log(`ℹ️ Collection ${name} already exists`);
       } else throw err;
     }
-
     for (const attr of attributes) {
       const { type, key, required = false, array = false, size, defaultValue } = attr;
       try {
@@ -93,6 +92,26 @@ async function setup() {
     }
   }
 
+  async function createIndexIfMissing(collectionId, key, type, attributes, orders = []) {
+    try {
+      await databases.createIndex({
+        databaseId,
+        collectionId,
+        key,
+        type, // 'key' | 'fulltext' | 'unique'
+        attributes,
+        orders,
+      });
+      console.log(`   🔎 Index ${key} created on ${collectionId}`);
+    } catch (err) {
+      if (err.code === 409) {
+        console.log(`   ℹ️ Index ${key} already exists on ${collectionId}`);
+      } else {
+        console.error(`   ❌ Index ${key} error:`, err.message);
+      }
+    }
+  }
+
   // Collections
 
   await createCollectionWithAttributes(
@@ -103,8 +122,13 @@ async function setup() {
       { type: "string", key: "title", required: true },
       { type: "string", key: "description" },
       { type: "datetime", key: "datetime", required: true },
+      // Extra field to align with frontend ordering
+      { type: "datetime", key: "ts" },
     ]
   );
+  if (process.env.VITE_APPWRITE_COL_ALERTS) {
+    await createIndexIfMissing(process.env.VITE_APPWRITE_COL_ALERTS, 'ts_desc', 'key', ['ts'], ['DESC']);
+  }
 
   await createCollectionWithAttributes(
     process.env.VITE_APPWRITE_COL_SENSORS,
@@ -119,6 +143,8 @@ async function setup() {
       { type: "float", key: "location_lat" },
       { type: "float", key: "location_lng" },
       { type: "datetime", key: "datetime", required: true },
+      // Extra field to align with frontend ordering
+      { type: "datetime", key: "ts" },
     ]
   );
 
@@ -129,6 +155,8 @@ async function setup() {
       { type: "float", key: "lat", required: true },
       { type: "float", key: "lng", required: true },
       { type: "datetime", key: "datetime", required: true },
+      // Extra field to align with frontend ordering
+      { type: "datetime", key: "ts" },
     ]
   );
 
@@ -141,6 +169,89 @@ async function setup() {
       { type: "integer", key: "priority" },
     ]
   );
+
+  // Optional: Users collection (used by Profile/Users pages)
+  if (process.env.VITE_APPWRITE_COL_USERS) {
+    await createCollectionWithAttributes(
+      process.env.VITE_APPWRITE_COL_USERS,
+      "Users (App data)",
+      [
+        { type: "string", key: "name" },
+        { type: "string", key: "email" },
+        { type: "string", key: "role" },
+        { type: "string", key: "status" },
+      ]
+    );
+    await createIndexIfMissing(process.env.VITE_APPWRITE_COL_USERS, 'email_eq', 'key', ['email']);
+  }
+
+  // Owner–Car–Driver model
+  if (process.env.VITE_APPWRITE_COL_CARS) {
+    await createCollectionWithAttributes(
+      process.env.VITE_APPWRITE_COL_CARS,
+      "Cars",
+      [
+        { type: "string", key: "ownerId", required: true },
+        { type: "string", key: "alias" },
+        { type: "string", key: "plateNumber" },
+        { type: "string", key: "vin" },
+        { type: "string", key: "make" },
+        { type: "string", key: "model" },
+        { type: "integer", key: "year" },
+        { type: "string", key: "color" },
+        { type: "datetime", key: "createdAt" },
+      ]
+    );
+  }
+
+  if (process.env.VITE_APPWRITE_COL_DRIVER_PROFILES) {
+    await createCollectionWithAttributes(
+      process.env.VITE_APPWRITE_COL_DRIVER_PROFILES,
+      "DriverProfiles",
+      [
+        { type: "string", key: "ownerId", required: true },
+        { type: "string", key: "name" },
+        { type: "string", key: "email" },
+        { type: "string", key: "phone" },
+        { type: "string", key: "licenseNo" },
+        { type: "string", key: "backgroundNotes" },
+        { type: "integer", key: "violations" },
+        { type: "datetime", key: "lastMedicalCheck" },
+        { type: "datetime", key: "createdAt" },
+      ]
+    );
+  }
+
+  if (process.env.VITE_APPWRITE_COL_ASSIGNMENTS) {
+    await createCollectionWithAttributes(
+      process.env.VITE_APPWRITE_COL_ASSIGNMENTS,
+      "Assignments",
+      [
+        { type: "string", key: "ownerId", required: true },
+        { type: "string", key: "carId", required: true },
+        { type: "string", key: "driverProfileId", required: true },
+        // Boolean not handled in helper; use integer 0/1 for active
+        { type: "integer", key: "active", defaultValue: 1 },
+        { type: "datetime", key: "ts" },
+        { type: "datetime", key: "endedAt" },
+      ]
+    );
+  }
+
+  if (process.env.VITE_APPWRITE_COL_DRIVER_RECORDS) {
+    await createCollectionWithAttributes(
+      process.env.VITE_APPWRITE_COL_DRIVER_RECORDS,
+      "DriverRecords",
+      [
+        { type: "string", key: "driverProfileId", required: true },
+        { type: "string", key: "type" },
+        { type: "string", key: "level" },
+        { type: "string", key: "title" },
+        { type: "string", key: "description" },
+        { type: "datetime", key: "ts" },
+      ]
+    );
+  }
 
   console.log("🎉 Setup complete.");
 }

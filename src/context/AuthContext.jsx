@@ -18,7 +18,9 @@ export function AuthProvider({ children }) {
         if (!isMounted) return;
         setUser(me);
         // Prefer role from account.prefs.role if present
-        const r = me?.prefs?.role || me?.labels?.find?.((l) => ["admin", "user"].includes(l)) || "user";
+        const r = me?.prefs?.role && ["admin","owner","driver","user"].includes(me.prefs.role)
+          ? me.prefs.role
+          : me?.labels?.find?.((l) => ["admin","owner","driver","user"].includes(l)) || "user";
         setRole(r);
       } catch (e) {
         if (!isMounted) return;
@@ -40,7 +42,9 @@ export function AuthProvider({ children }) {
       await account.createEmailPasswordSession(email, password);
       const me = await account.get();
       setUser(me);
-      const r = me?.prefs?.role || me?.labels?.find?.((l) => ["admin", "user"].includes(l)) || "user";
+      const r = me?.prefs?.role && ["admin","owner","driver","user"].includes(me.prefs.role)
+        ? me.prefs.role
+        : me?.labels?.find?.((l) => ["admin","owner","driver","user"].includes(l)) || "user";
       setRole(r);
       return { ok: true };
     } catch (e) {

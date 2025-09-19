@@ -14,6 +14,9 @@ import { seedMockData } from "./lib/dataService";
 import UsersPage from "./pages/Users";
 import Records from "./pages/Records";
 import Profile from "./pages/Profile";
+import OwnerGarage from "./pages/OwnerGarage";
+import OwnerDrivers from "./pages/OwnerDrivers";
+import OwnerDriverDetail from "./pages/OwnerDriverDetail";
 
 function Layout() {
   const { isAuthenticated, role } = useAuth();
@@ -39,6 +42,9 @@ function Layout() {
         <Route path="/users" element={<ProtectedRoute allowedRoles={["admin"]}><UsersPage /></ProtectedRoute>} />
         <Route path="/records" element={<ProtectedRoute allowedRoles={["driver"]}><Records /></ProtectedRoute>} />
         <Route path="/profile" element={<ProtectedRoute allowedRoles={["driver","owner","admin"]}><Profile /></ProtectedRoute>} />
+        <Route path="/garage" element={<ProtectedRoute allowedRoles={["owner","admin"]}><OwnerGarage /></ProtectedRoute>} />
+        <Route path="/owner-drivers" element={<ProtectedRoute allowedRoles={["owner","admin"]}><OwnerDrivers /></ProtectedRoute>} />
+        <Route path="/owner-drivers/:driverId" element={<ProtectedRoute allowedRoles={["owner","admin"]}><OwnerDriverDetail /></ProtectedRoute>} />
         <Route path="/" element={<Navigate to={home} replace />} />
         <Route path="*" element={<Navigate to={home} replace />} />
       </Routes>

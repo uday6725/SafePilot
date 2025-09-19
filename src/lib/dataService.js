@@ -1,6 +1,6 @@
 import { ID, Query } from "appwrite";
 import { databases } from "./appwrite";
-import { DB_ID, COL_ALERTS, COL_SENSORS, COL_LOCATIONS, COL_CONTACTS, COL_USERS, assertCollections } from "./collections";
+import { DB_ID, COL_ALERTS, COL_SENSORS, COL_LOCATIONS, COL_CONTACTS, COL_USERS, COL_CARS, COL_DRIVER_PROFILES, COL_ASSIGNMENTS, COL_DRIVER_RECORDS, assertCollections } from "./collections";
 
 export async function seedMockData() {
   assertCollections();
@@ -126,4 +126,68 @@ export async function upsertUser(doc) {
   if (!COL_USERS) throw new Error("VITE_APPWRITE_COL_USERS not configured");
   if (doc.$id) return databases.updateDocument(DB_ID, COL_USERS, doc.$id, doc);
   return databases.createDocument(DB_ID, COL_USERS, ID.unique(), doc);
+}
+
+// Cars CRUD (owner scoped; add ownerId attribute on create)
+export async function listCars({ ownerId, limit = 100 } = {}) {
+  const filters = [Query.limit(limit)];
+  if (ownerId) filters.push(Query.equal("ownerId", ownerId));
+  const res = await databases.listDocuments(DB_ID, COL_CARS, filters);
+  return res.documents;
+}
+export async function upsertCar(doc) {
+  if (doc.$id) return databases.updateDocument(DB_ID, COL_CARS, doc.$id, doc);
+  return databases.createDocument(DB_ID, COL_CARS, ID.unique(), doc);
+}
+export async function deleteCar(id) {
+  return databases.deleteDocument(DB_ID, COL_CARS, id);
+}
+
+// Driver profiles (background info)
+export async function listDriverProfiles({ ownerId, limit = 200 } = {}) {
+  const filters = [Query.limit(limit)];
+  if (ownerId) filters.push(Query.equal("ownerId", ownerId));
+  const res = await databases.listDocuments(DB_ID, COL_DRIVER_PROFILES, filters);
+  return res.documents;
+}
+export async function findDriverProfileByEmail({ email, ownerId }) {
+  const filters = [];
+  if (email) filters.push(Query.equal("email", email));
+  if (ownerId) filters.push(Query.equal("ownerId", ownerId));
+  const res = await databases.listDocuments(DB_ID, COL_DRIVER_PROFILES, filters);
+  return res.documents?.[0] || null;
+}
+export async function upsertDriverProfile(doc) {
+  if (doc.$id) return databases.updateDocument(DB_ID, COL_DRIVER_PROFILES, doc.$id, doc);
+  return databases.createDocument(DB_ID, COL_DRIVER_PROFILES, ID.unique(), doc);
+}
+export async function deleteDriverProfile(id) {
+  return databases.deleteDocument(DB_ID, COL_DRIVER_PROFILES, id);
+}
+
+// Assignments: link driverProfileId <-> carId (and ownerId)
+export async function listAssignments({ ownerId, carId, driverProfileId, limit = 200 } = {}) {
+  const filters = [Query.limit(limit)];
+  if (ownerId) filters.push(Query.equal("ownerId", ownerId));
+  if (carId) filters.push(Query.equal("carId", carId));
+  if (driverProfileId) filters.push(Query.equal("driverProfileId", driverProfileId));
+  const res = await databases.listDocuments(DB_ID, COL_ASSIGNMENTS, filters);
+  return res.documents;
+}
+export async function assignDriver({ ownerId, carId, driverProfileId, active = true }) {
+  return databases.createDocument(DB_ID, COL_ASSIGNMENTS, ID.unique(), { ownerId, carId, driverProfileId, active, ts: new Date().toISOString() });
+}
+export async function unassignDriver(assignmentId) {
+  return databases.updateDocument(DB_ID, COL_ASSIGNMENTS, assignmentId, { active: false, endedAt: new Date().toISOString() });
+}
+
+// Driver records (historical incidents)
+export async function listDriverRecords({ driverProfileId, limit = 200 } = {}) {
+  const filters = [Query.orderDesc("ts"), Query.limit(limit)];
+  if (driverProfileId) filters.push(Query.equal("driverProfileId", driverProfileId));
+  const res = await databases.listDocuments(DB_ID, COL_DRIVER_RECORDS, filters);
+  return res.documents;
+}
+export async function addDriverRecord(doc) {
+  return databases.createDocument(DB_ID, COL_DRIVER_RECORDS, ID.unique(), doc);
 }

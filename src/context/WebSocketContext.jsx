@@ -8,6 +8,11 @@ export function WebSocketProvider({ children }) {
   const [sensorData, setSensorData] = useState({ heartRate: 0, drowsiness: 0, alcoholLevel: 0, proximity: 0, location: { lat: 19.076, lng: 72.8777 }, speed: 0, status: "Normal" });
   const [alerts, setAlerts] = useState([]);
   const [history, setHistory] = useState({ heartRate: [], drowsiness: [], alcoholLevel: [], proximity: [] });
+  // IoT flow state
+  const [authEvent, setAuthEvent] = useState(null); // { verified, method, driver, car, ts }
+  const [ignition, setIgnition] = useState({ ready: false, reason: "awaiting_verification" });
+  const [remoteControl, setRemoteControl] = useState({ enabled: false, reason: null });
+  const [lastEmergency, setLastEmergency] = useState(null);
   const socketRef = useRef(null);
 
   useEffect(() => {
@@ -57,6 +62,35 @@ export function WebSocketProvider({ children }) {
       }
     });
 
+    // IoT flow events
+    socket.on("auth_event", (evt) => {
+      // evt: { verified, method, driver, car, ts }
+      setAuthEvent(evt);
+      if (evt.verified) {
+        setIgnition({ ready: true, reason: "verified" });
+      } else {
+        setIgnition({ ready: false, reason: "verification_failed" });
+      }
+    });
+
+    socket.on("ignition_status", (evt) => {
+      // evt: { ready, reason }
+      if (typeof evt?.ready === 'boolean') setIgnition({ ready: evt.ready, reason: evt.reason || null });
+    });
+
+    socket.on("remote_control", (evt) => {
+      // evt: { enabled, reason }
+      if (typeof evt?.enabled === 'boolean') setRemoteControl({ enabled: evt.enabled, reason: evt.reason || null });
+    });
+
+    socket.on("emergency_event", (evt) => {
+      // evt: { alcoholLevel, heartRate, driver, car, location, ts, note }
+      setLastEmergency(evt);
+      // Also push a critical alert card for visibility
+      const withTs = { id: crypto.randomUUID(), ts: evt.ts || new Date().toISOString(), level: 'critical', title: 'Emergency Event', description: evt.note || 'See details' };
+      setAlerts((prev) => [withTs, ...prev].slice(0, 200));
+    });
+
     return () => {
       socket.removeAllListeners();
       socket.close();
@@ -68,7 +102,19 @@ export function WebSocketProvider({ children }) {
     socketRef.current.emit("control_command", { command, ...data });
   }
 
-  const value = useMemo(() => ({ connected, sensorData, setSensorData, alerts, setAlerts, history, sendCommand }), [connected, sensorData, alerts, history]);
+  const value = useMemo(() => ({
+    connected,
+    sensorData,
+    setSensorData,
+    alerts,
+    setAlerts,
+    history,
+    sendCommand,
+    authEvent,
+    ignition,
+    remoteControl,
+    lastEmergency,
+  }), [connected, sensorData, alerts, history, authEvent, ignition, remoteControl, lastEmergency]);
 
   return <WebSocketContext.Provider value={value}>{children}</WebSocketContext.Provider>;
 }
