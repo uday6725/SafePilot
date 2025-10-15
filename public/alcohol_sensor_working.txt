@@ -1,0 +1,11 @@
+┌─────────────┐    PUBLISH    ┌─────────────┐   DELIVER   ┌─────────────┐
+│   ESP8266   │ ────────────> │  HiveMQ     │ ──────────> │  Dashboard  │
+│ (Publisher) │  "car/alcohol/status" │ Cloud │  "car/alcohol/status" │ (Subscriber) │
+└─────────────┘               └─────────────┘             └─────────────┘
+      │                              │                            │
+      │ Alcohol Sensor               │                            │
+      │ Data                         │                            │
+      ▼                              │                            ▼
+• Reads sensor                      │                    • Updates UI
+• Creates JSON                      │                    • Controls buttons
+• Publishes to topic                │                    • Shows alerts
