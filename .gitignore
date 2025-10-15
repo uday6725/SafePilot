@@ -24,3 +24,4 @@ dist-ssr
 *.sw?
 
 .env
+VEHICLE_CONTROL_README.md
