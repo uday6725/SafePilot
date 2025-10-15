@@ -17,6 +17,7 @@ import Profile from "./pages/Profile";
 import OwnerGarage from "./pages/OwnerGarage";
 import OwnerDrivers from "./pages/OwnerDrivers";
 import OwnerDriverDetail from "./pages/OwnerDriverDetail";
+import VehicleControl from "./pages/VehicleControl";
 
 function Layout() {
   const { isAuthenticated, role } = useAuth();
@@ -34,17 +35,18 @@ function Layout() {
       {isAuthenticated && <Navbar />}
       <Routes>
         <Route path="/login" element={<Login />} />
-        <Route path="/dashboard" element={<ProtectedRoute allowedRoles={["admin","owner","driver"]}><Dashboard /></ProtectedRoute>} />
-        <Route path="/alerts" element={<ProtectedRoute allowedRoles={["admin","owner","driver"]}><Alerts /></ProtectedRoute>} />
+        <Route path="/dashboard" element={<ProtectedRoute allowedRoles={["admin", "owner", "driver"]}><Dashboard /></ProtectedRoute>} />
+        <Route path="/alerts" element={<ProtectedRoute allowedRoles={["admin", "owner", "driver"]}><Alerts /></ProtectedRoute>} />
         <Route path="/controls" element={<ControlsPage />} />
-        <Route path="/location" element={<ProtectedRoute allowedRoles={["admin","owner"]}><LocationPage /></ProtectedRoute>} />
+        <Route path="/location" element={<ProtectedRoute allowedRoles={["admin", "owner"]}><LocationPage /></ProtectedRoute>} />
         <Route path="/admin" element={<ProtectedRoute allowedRoles={["admin"]}><AdminPage /></ProtectedRoute>} />
         <Route path="/users" element={<ProtectedRoute allowedRoles={["admin"]}><UsersPage /></ProtectedRoute>} />
         <Route path="/records" element={<ProtectedRoute allowedRoles={["driver"]}><Records /></ProtectedRoute>} />
-        <Route path="/profile" element={<ProtectedRoute allowedRoles={["driver","owner","admin"]}><Profile /></ProtectedRoute>} />
-        <Route path="/garage" element={<ProtectedRoute allowedRoles={["owner","admin"]}><OwnerGarage /></ProtectedRoute>} />
-        <Route path="/owner-drivers" element={<ProtectedRoute allowedRoles={["owner","admin"]}><OwnerDrivers /></ProtectedRoute>} />
-        <Route path="/owner-drivers/:driverId" element={<ProtectedRoute allowedRoles={["owner","admin"]}><OwnerDriverDetail /></ProtectedRoute>} />
+        <Route path="/profile" element={<ProtectedRoute allowedRoles={["driver", "owner", "admin"]}><Profile /></ProtectedRoute>} />
+        <Route path="/garage" element={<ProtectedRoute allowedRoles={["owner", "admin"]}><OwnerGarage /></ProtectedRoute>} />
+        <Route path="/owner-drivers" element={<ProtectedRoute allowedRoles={["owner", "admin"]}><OwnerDrivers /></ProtectedRoute>} />
+        <Route path="/owner-drivers/:driverId" element={<ProtectedRoute allowedRoles={["owner", "admin"]}><OwnerDriverDetail /></ProtectedRoute>} />
+        <Route path="/vehicle-control" element={<ProtectedRoute allowedRoles={["admin", "owner"]}><VehicleControl /></ProtectedRoute>} />
         <Route path="/" element={<Navigate to={home} replace />} />
         <Route path="*" element={<Navigate to={home} replace />} />
       </Routes>

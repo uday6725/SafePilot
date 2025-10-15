@@ -9,6 +9,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "mock-server": "node server.js",
+    "mqtt-test-server": "node mqtt-test-server.js",
     "appwrite-setup": "node appwrite-setup.js",
     "appwrite-insert-data": "node appwrite-insert-data.js"
   },
@@ -19,6 +20,7 @@
     "dotenv": "^17.2.2",
     "leaflet": "^1.9.4",
     "lucide-react": "^0.544.0",
+    "mqtt": "^5.14.1",
     "node-appwrite": "^19.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
@@ -27,7 +29,8 @@
     "react-webcam": "^7.2.0",
     "socket.io": "^4.8.1",
     "socket.io-client": "^4.8.1",
-    "tailwindcss": "^4.0.14"
+    "tailwindcss": "^4.0.14",
+    "ws": "^8.18.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.19.0",

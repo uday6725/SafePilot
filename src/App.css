@@ -4,6 +4,62 @@ summary::-webkit-details-marker {
   display: none
 }
 
+/* Vehicle Control Slider Styling */
+.slider {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.slider::-webkit-slider-track {
+  background: #334155;
+  height: 8px;
+  border-radius: 4px;
+}
+
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  background: #06b6d4;
+  height: 20px;
+  width: 20px;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 0 10px rgba(6, 182, 212, 0.5);
+  transition: all 0.2s ease;
+}
+
+.slider::-webkit-slider-thumb:hover {
+  background: #0891b2;
+  box-shadow: 0 0 15px rgba(6, 182, 212, 0.7);
+  transform: scale(1.1);
+}
+
+.slider::-moz-range-track {
+  background: #334155;
+  height: 8px;
+  border-radius: 4px;
+  border: none;
+}
+
+.slider::-moz-range-thumb {
+  background: #06b6d4;
+  height: 20px;
+  width: 20px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 0 10px rgba(6, 182, 212, 0.5);
+  transition: all 0.2s ease;
+}
+
+.slider::-moz-range-thumb:hover {
+  background: #0891b2;
+  box-shadow: 0 0 15px rgba(6, 182, 212, 0.7);
+  transform: scale(1.1);
+}
+
 .checker-background::before {
   content: "";
   position: absolute;

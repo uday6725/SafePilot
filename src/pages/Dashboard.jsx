@@ -115,6 +115,7 @@ export default function Dashboard() {
                   <Link to="/users" className="px-3 py-2 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-100">Users</Link>
                   <Link to="/location" className="px-3 py-2 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-100">Locations</Link>
                   <Link to="/controls" className="px-3 py-2 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-100">Controls</Link>
+                  <Link to="/vehicle-control" className="px-3 py-2 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-100">🏎️ Vehicle</Link>
                 </div>
               </div>
             )}
@@ -127,6 +128,7 @@ export default function Dashboard() {
                   <Link to="/owner-drivers" className="px-3 py-2 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-100">Drivers</Link>
                   <Link to="/location" className="px-3 py-2 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-100">Locations</Link>
                   <Link to="/controls" className="px-3 py-2 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-100">Controls</Link>
+                  <Link to="/vehicle-control" className="px-3 py-2 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-100">🏎️ Vehicle</Link>
                 </div>
               </div>
             )}
