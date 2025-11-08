@@ -38,6 +38,8 @@ export default function VehicleControl() {
   const [logs, setLogs] = useState([]);
   const accelerateInterval = useRef(null);
   const clientRef = useRef(null);
+  const reconnectTimeoutRef = useRef(null);
+  const isConnectingRef = useRef(false);
   
   const MAX_SPEED = parseInt(import.meta.env.VITE_MAX_SPEED) || 1023;
   const ACCELERATION_RATE = parseInt(import.meta.env.VITE_ACCELERATION_RATE) || 50;
@@ -56,10 +58,19 @@ export default function VehicleControl() {
 
   // MQTT Connection
   const connectMQTT = useCallback(async () => {
-    if (isConnected) {
-      addLog('Already connected to MQTT', 'info');
+    // Prevent multiple simultaneous connection attempts
+    if (isConnectingRef.current || isConnected) {
+      console.log('Connection already in progress or established');
       return;
     }
+
+    // Clear any pending reconnect timeout
+    if (reconnectTimeoutRef.current) {
+      clearTimeout(reconnectTimeoutRef.current);
+      reconnectTimeoutRef.current = null;
+    }
+
+    isConnectingRef.current = true;
 
     try {
       addLog('Connecting to MQTT broker...', 'info');
@@ -80,11 +91,18 @@ export default function VehicleControl() {
         console.log('MQTT Connection lost:', responseObject);
         setIsConnected(false);
         setConnectionStatus('Disconnected');
+        isConnectingRef.current = false;
+        
         if (responseObject.errorCode !== 0) {
           addLog('Connection lost: ' + responseObject.errorMessage, 'error');
+          // Only auto-reconnect on unexpected disconnections
+          addLog('Attempting to reconnect in 5 seconds...', 'warning');
+          reconnectTimeoutRef.current = setTimeout(() => {
+            connectMQTT();
+          }, 5000);
+        } else {
+          addLog('Disconnected from MQTT broker', 'info');
         }
-        // Auto-reconnect after 5 seconds
-        setTimeout(connectMQTT, 5000);
       };
 
       client.onMessageArrived = (message) => {
@@ -103,26 +121,42 @@ export default function VehicleControl() {
       const connectOptions = {
         onSuccess: () => {
           console.log('MQTT Connected successfully');
+          isConnectingRef.current = false;
           setIsConnected(true);
           setConnectionStatus('Connected');
-          client.subscribe(MQTT_CONFIG.topics.status);
-          addLog('Connected to MQTT broker!', 'success');
-          addLog('Subscribed to: ' + MQTT_CONFIG.topics.status, 'success');
-          sendCommand({ type: 'status_request' });
+          
+          // Subscribe to status topic
+          try {
+            client.subscribe(MQTT_CONFIG.topics.status);
+            addLog('Connected to MQTT broker!', 'success');
+            addLog('Subscribed to: ' + MQTT_CONFIG.topics.status, 'success');
+            
+            // Request initial status
+            const statusMsg = new Paho.MQTT.Message(JSON.stringify({ type: 'status_request' }));
+            statusMsg.destinationName = MQTT_CONFIG.topics.command;
+            client.send(statusMsg);
+          } catch (err) {
+            console.error('Error subscribing:', err);
+            addLog('Error subscribing to topics: ' + err.message, 'error');
+          }
         },
         onFailure: (message) => {
           console.error('MQTT Connection failed:', message);
+          isConnectingRef.current = false;
           setIsConnected(false);
           setConnectionStatus('Failed');
           addLog('Connection failed: ' + message.errorMessage, 'error');
-          setTimeout(connectMQTT, 5000);
+          addLog('Retrying in 5 seconds...', 'warning');
+          reconnectTimeoutRef.current = setTimeout(() => {
+            connectMQTT();
+          }, 5000);
         },
         userName: MQTT_CONFIG.username,
         password: MQTT_CONFIG.password,
         useSSL: true,
-        timeout: 10,
-        keepAliveInterval: 60,
-        cleanSession: true
+        timeout: 15,
+        keepAliveInterval: 30,
+        cleanSession: false
       };
 
       client.connect(connectOptions);
@@ -131,8 +165,13 @@ export default function VehicleControl() {
 
     } catch (error) {
       console.error('Connection error:', error);
+      isConnectingRef.current = false;
       addLog('Connection error: ' + error.message, 'error');
       setConnectionStatus('Error');
+      addLog('Retrying in 5 seconds...', 'warning');
+      reconnectTimeoutRef.current = setTimeout(() => {
+        connectMQTT();
+      }, 5000);
     }
   }, [isConnected, addLog]);
 
@@ -184,11 +223,6 @@ export default function VehicleControl() {
 
   // Control Functions
   const startAccelerate = useCallback(() => {
-    if (!isConnected) {
-      addLog('Not connected to MQTT', 'error');
-      return;
-    }
-    
     stopDrive();
     accelerateInterval.current = setInterval(() => {
       setCurrentSpeed(prev => {
@@ -201,14 +235,9 @@ export default function VehicleControl() {
         return newSpeed;
       });
     }, 100);
-  }, [isConnected, sendCommand, addLog]);
+  }, [sendCommand, addLog]);
 
   const startBrake = useCallback(() => {
-    if (!isConnected) {
-      addLog('Not connected to MQTT', 'error');
-      return;
-    }
-    
     stopDrive();
     accelerateInterval.current = setInterval(() => {
       setCurrentSpeed(prev => {
@@ -221,7 +250,7 @@ export default function VehicleControl() {
         return newSpeed;
       });
     }, 100);
-  }, [isConnected, sendCommand, addLog]);
+  }, [sendCommand, addLog]);
 
   const stopDrive = useCallback(() => {
     if (accelerateInterval.current) {
@@ -239,46 +268,34 @@ export default function VehicleControl() {
   }, [isConnected, sendCommand]);
 
   const sendDriveCommand = useCallback((direction) => {
-    if (!isConnected) {
-      addLog('Not connected to MQTT', 'error');
-      return;
-    }
     sendCommand({
       type: 'drive',
       direction: direction,
       speed: currentSpeed
     });
-  }, [isConnected, currentSpeed, sendCommand, addLog]);
+  }, [currentSpeed, sendCommand, addLog]);
 
   const steerLeft = useCallback(() => {
-    if (isConnected) {
-      sendCommand({ type: 'steer', direction: 'left' });
-      addLog('Steering LEFT', 'info');
-    }
-  }, [isConnected, sendCommand, addLog]);
+    sendCommand({ type: 'steer', direction: 'left' });
+    addLog('Steering LEFT', 'info');
+  }, [sendCommand, addLog]);
 
   const steerRight = useCallback(() => {
-    if (isConnected) {
-      sendCommand({ type: 'steer', direction: 'right' });
-      addLog('Steering RIGHT', 'info');
-    }
-  }, [isConnected, sendCommand, addLog]);
+    sendCommand({ type: 'steer', direction: 'right' });
+    addLog('Steering RIGHT', 'info');
+  }, [sendCommand, addLog]);
 
   const centerSteer = useCallback(() => {
-    if (isConnected) {
-      sendCommand({ type: 'steer', direction: 'center' });
-      addLog('Steering CENTERED', 'info');
-    }
-  }, [isConnected, sendCommand, addLog]);
+    sendCommand({ type: 'steer', direction: 'center' });
+    addLog('Steering CENTERED', 'info');
+  }, [sendCommand, addLog]);
 
   const emergencyStop = useCallback(() => {
-    if (isConnected) {
-      sendCommand({ type: 'emergency_stop' });
-      addLog('EMERGENCY STOP activated!', 'error');
-    }
+    sendCommand({ type: 'emergency_stop' });
+    addLog('EMERGENCY STOP activated!', 'error');
     stopDrive();
     centerSteer();
-  }, [isConnected, sendCommand, addLog, stopDrive, centerSteer]);
+  }, [sendCommand, addLog, stopDrive, centerSteer]);
 
   // Keyboard controls
   useEffect(() => {
@@ -359,16 +376,28 @@ export default function VehicleControl() {
   // Cleanup on unmount
   useEffect(() => {
     return () => {
+      // Clear reconnect timeout
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+        reconnectTimeoutRef.current = null;
+      }
+      
+      // Clear acceleration interval
       if (accelerateInterval.current) {
         clearInterval(accelerateInterval.current);
       }
+      
+      // Disconnect MQTT client
       if (clientRef.current && isConnected) {
         try {
           clientRef.current.disconnect();
+          console.log('MQTT client disconnected on unmount');
         } catch (e) {
           console.warn('Error disconnecting MQTT:', e);
         }
       }
+      
+      isConnectingRef.current = false;
     };
   }, [isConnected]);
 

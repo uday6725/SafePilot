@@ -25,3 +25,4 @@ dist-ssr
 
 .env
 VEHICLE_CONTROL_README.md
+MQTT_CONNECTION_FIX.md
