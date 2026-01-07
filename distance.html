@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vehicle Distance Monitor</title>
+    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .distance-display {
+            font-size: 3em;
+            font-weight: bold;
+            text-align: center;
+            margin: 20px 0;
+            color: #2c3e50;
+        }
+        .status-box {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            text-align: center;
+            border-left: 5px solid #007bff;
+        }
+        .status-safe { border-left-color: #28a745; }
+        .status-warning { border-left-color: #ffc107; }
+        .status-danger { border-left-color: #dc3545; }
+        .connection-status {
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            text-align: center;
+            font-weight: bold;
+        }
+        .connected { background: #d4edda; color: #155724; }
+        .disconnected { background: #f8d7da; color: #721c24; }
+        .connecting { background: #fff3cd; color: #856404; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: left;
+        }
+        th {
+            background-color: #f8f9fa;
+        }
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin: 15px 0;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .btn-emergency { background: #dc3545; color: white; }
+        .btn-start { background: #28a745; color: white; }
+        .btn-connect { background: #007bff; color: white; }
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            margin: 15px 0;
+        }
+        .info-item {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Vehicle Distance Monitor</h1>
+            <p>Real-time monitoring via HiveMQ Cloud</p>
+        </div>
+
+        <div id="connectionStatus" class="connection-status disconnected">
+            Click "Connect" to start
+        </div>
+
+        <div class="distance-display" id="distanceValue">
+            -- cm
+        </div>
+
+        <div id="statusBox" class="status-box status-warning">
+            <div id="statusText" style="font-size: 1.2em; font-weight: bold;">WAITING FOR DATA</div>
+            <div id="statusMessage" style="margin-top: 5px;">Press Connect to start receiving data</div>
+        </div>
+
+        <div class="info-grid">
+            <div class="info-item">
+                <div>Emergency Stop</div>
+                <div id="emergencyStatus" style="font-weight: bold;">--</div>
+            </div>
+            <div class="info-item">
+                <div>WiFi Strength</div>
+                <div id="wifiStrength" style="font-weight: bold;">-- dBm</div>
+            </div>
+            <div class="info-item">
+                <div>Last Update</div>
+                <div id="lastUpdate" style="font-weight: bold;">--:--:--</div>
+            </div>
+            <div class="info-item">
+                <div>Sensor ID</div>
+                <div id="sensorId" style="font-weight: bold;">--</div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="btn-connect" onclick="connectMQTT()">
+                Connect to HiveMQ
+            </button>
+            <button class="btn-emergency" onclick="sendCommand('emergency_stop')">
+                Emergency Stop
+            </button>
+            <button class="btn-start" onclick="sendCommand('start')">
+                Start System
+            </button>
+        </div>
+
+        <div>
+            <h3>Recent Readings</h3>
+            <table id="readingsTable">
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>Distance (cm)</th>
+                        <th>Status</th>
+                        <th>Emergency Stop</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td colspan="4" style="text-align: center;">No data received yet</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // HiveMQ Configuration
+        const config = {
+            host: "e6b743415d1444529d58b08f715a939f.s1.eu.hivemq.cloud",
+            port: 8884,
+            username: "shindemahesh.dev",
+            password: "Mahesh@4681",
+            clientId: "web-dashboard-" + Math.random().toString(36).substr(2, 9)
+        };
+
+        let client = null;
+        let isConnected = false;
+        let readings = [];
+
+        function connectMQTT() {
+            try {
+                updateConnectionStatus("Connecting to HiveMQ Cloud...", "connecting");
+                
+                // Close existing connection if any
+                if (client) {
+                    client.end();
+                }
+
+                // MQTT connection options
+                const options = {
+                    username: config.username,
+                    password: config.password,
+                    clientId: config.clientId,
+                    clean: true,
+                    reconnectPeriod: 1000,
+                    connectTimeout: 30000
+                };
+
+                // Connect using MQTT.js library
+                const url = `wss://${config.host}:${config.port}/mqtt`;
+                console.log("Connecting to:", url);
+                
+                client = mqtt.connect(url, options);
+
+                client.on('connect', function () {
+                    console.log("✅ Connected to HiveMQ");
+                    isConnected = true;
+                    updateConnectionStatus("Connected to HiveMQ Cloud", "connected");
+                    
+                    // Subscribe to vehicle status topic
+                    client.subscribe('vehicle/status', function (err) {
+                        if (!err) {
+                            console.log("✅ Subscribed to vehicle/status");
+                        } else {
+                            console.error("❌ Subscription error:", err);
+                        }
+                    });
+                });
+
+                client.on('message', function (topic, message) {
+                    console.log("📨 Message received on topic:", topic);
+                    try {
+                        const data = JSON.parse(message.toString());
+                        updateDisplay(data);
+                    } catch (error) {
+                        console.error("❌ Error parsing message:", error);
+                    }
+                });
+
+                client.on('error', function (error) {
+                    console.error("❌ MQTT error:", error);
+                    updateConnectionStatus("Connection error: " + error.message, "disconnected");
+                    isConnected = false;
+                });
+
+                client.on('close', function () {
+                    console.log("🔌 Connection closed");
+                    updateConnectionStatus("Disconnected from HiveMQ", "disconnected");
+                    isConnected = false;
+                });
+
+                client.on('offline', function () {
+                    console.log("🔌 Client offline");
+                    updateConnectionStatus("Offline", "disconnected");
+                    isConnected = false;
+                });
+
+            } catch (error) {
+                console.error("❌ Connection error:", error);
+                updateConnectionStatus("Error: " + error.message, "disconnected");
+            }
+        }
+
+        function updateDisplay(data) {
+            // Update distance value
+            if (data.distance !== undefined) {
+                const distanceValue = parseFloat(data.distance).toFixed(1);
+                document.getElementById('distanceValue').textContent = distanceValue + " cm";
+                
+                // Update status box
+                const statusBox = document.getElementById('statusBox');
+                const statusText = document.getElementById('statusText');
+                const statusMessage = document.getElementById('statusMessage');
+                
+                statusText.textContent = data.status || 'UNKNOWN';
+                statusMessage.textContent = data.message || '';
+                
+                // Update status color
+                statusBox.className = 'status-box';
+                if (data.status === 'SAFE') {
+                    statusBox.classList.add('status-safe');
+                } else if (data.status === 'WARNING') {
+                    statusBox.classList.add('status-warning');
+                } else if (data.status === 'DANGER') {
+                    statusBox.classList.add('status-danger');
+                }
+            }
+            
+            // Update emergency stop status
+            if (data.emergency_stop !== undefined) {
+                const emergencyEl = document.getElementById('emergencyStatus');
+                emergencyEl.textContent = data.emergency_stop ? 'ACTIVE' : 'INACTIVE';
+                emergencyEl.style.color = data.emergency_stop ? '#dc3545' : '#28a745';
+            }
+            
+            // Update WiFi strength
+            if (data.wifi_strength !== undefined) {
+                document.getElementById('wifiStrength').textContent = data.wifi_strength + ' dBm';
+            }
+            
+            // Update sensor ID
+            if (data.sensor_id) {
+                document.getElementById('sensorId').textContent = data.sensor_id;
+            }
+            
+            // Update timestamp
+            document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
+            
+            // Add to readings history
+            addReading(data);
+        }
+
+        function addReading(data) {
+            const reading = {
+                time: new Date().toLocaleTimeString(),
+                distance: data.distance !== undefined ? parseFloat(data.distance).toFixed(1) : '--',
+                status: data.status || 'UNKNOWN',
+                emergencyStop: data.emergency_stop ? 'ACTIVE' : 'INACTIVE'
+            };
+            
+            readings.unshift(reading);
+            
+            // Keep only last 8 readings
+            if (readings.length > 8) {
+                readings.pop();
+            }
+            
+            updateReadingsTable();
+        }
+
+        function updateReadingsTable() {
+            const tableBody = document.querySelector('#readingsTable tbody');
+            
+            if (readings.length === 0) {
+                return;
+            }
+            
+            let html = '';
+            readings.forEach(reading => {
+                let statusColor = '#6c757d';
+                if (reading.status === 'SAFE') statusColor = '#28a745';
+                else if (reading.status === 'WARNING') statusColor = '#ffc107';
+                else if (reading.status === 'DANGER') statusColor = '#dc3545';
+                
+                let emergencyColor = reading.emergencyStop === 'ACTIVE' ? '#dc3545' : '#28a745';
+                
+                html += `
+                    <tr>
+                        <td>${reading.time}</td>
+                        <td><strong>${reading.distance}</strong></td>
+                        <td style="color: ${statusColor}">${reading.status}</td>
+                        <td style="color: ${emergencyColor}">${reading.emergencyStop}</td>
+                    </tr>
+                `;
+            });
+            
+            tableBody.innerHTML = html;
+        }
+
+        function sendCommand(command) {
+            if (!isConnected || !client) {
+                alert("Not connected to MQTT broker");
+                return;
+            }
+            
+            const message = {
+                command: command,
+                timestamp: Date.now()
+            };
+            
+            try {
+                client.publish('vehicle/control', JSON.stringify(message));
+                console.log("Command sent:", command);
+                
+                if (command === 'emergency_stop') {
+                    alert("Emergency Stop command sent!");
+                } else if (command === 'start') {
+                    alert("Start command sent!");
+                }
+                
+            } catch (error) {
+                console.error("Error sending command:", error);
+                alert("Error sending command");
+            }
+        }
+
+        function updateConnectionStatus(message, status) {
+            const statusEl = document.getElementById('connectionStatus');
+            statusEl.textContent = message;
+            statusEl.className = `connection-status ${status}`;
+        }
+
+        // Auto-connect when page loads (optional)
+        // window.onload = connectMQTT;
+    </script>
+</body>
+</html>

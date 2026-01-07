@@ -426,7 +426,7 @@ export default function VehicleControl() {
         <div className="max-w-7xl mx-auto px-4 py-6">
           {/* Header */}
           <div className="mb-6">
-            <h1 className="text-2xl font-semibold text-cyan-400 mb-2">🏎️ Vehicle Remote Control</h1>
+            {/* <h1 className="text-2xl font-semibold text-cyan-400 mb-2">🏎️ Vehicle Remote Control</h1> */}
             <p className="text-slate-400">Real-time MQTT control interface for ESP8266 connected vehicle</p>
           </div>
 

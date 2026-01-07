@@ -18,6 +18,7 @@ import OwnerGarage from "./pages/OwnerGarage";
 import OwnerDrivers from "./pages/OwnerDrivers";
 import OwnerDriverDetail from "./pages/OwnerDriverDetail";
 import VehicleControl from "./pages/VehicleControl";
+import RemoteControl from "./pages/RemoteControl";
 
 function Layout() {
   const { isAuthenticated, role } = useAuth();
@@ -47,6 +48,7 @@ function Layout() {
         <Route path="/owner-drivers" element={<ProtectedRoute allowedRoles={["owner", "admin"]}><OwnerDrivers /></ProtectedRoute>} />
         <Route path="/owner-drivers/:driverId" element={<ProtectedRoute allowedRoles={["owner", "admin"]}><OwnerDriverDetail /></ProtectedRoute>} />
         <Route path="/vehicle-control" element={<ProtectedRoute allowedRoles={["admin", "owner"]}><VehicleControl /></ProtectedRoute>} />
+        <Route path="/remote-control" element={<ProtectedRoute allowedRoles={["admin", "owner"]}><RemoteControl /></ProtectedRoute>} />
         <Route path="/" element={<Navigate to={home} replace />} />
         <Route path="*" element={<Navigate to={home} replace />} />
       </Routes>

@@ -26,6 +26,7 @@ export default function Navbar() {
             <>
               <NavLink to="/controls" className={linkCls}>Controls</NavLink>
               <NavLink to="/vehicle-control" className={linkCls}>Vehicle</NavLink>
+              <NavLink to="/remote-control" className={linkCls}>Remote Control</NavLink>
             </>
           )}
           {role === "admin" && (
