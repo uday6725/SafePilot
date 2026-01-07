@@ -23,6 +23,9 @@ dist-ssr
 *.sln
 *.sw?
 
-.env
 VEHICLE_CONTROL_README.md
 MQTT_CONNECTION_FIX.md
+overall-my-project-idea-draft.md
+.env
+
+next-remaining-things-to-do.txt

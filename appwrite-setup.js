@@ -196,7 +196,7 @@ async function setup() {
     ]
   );
   if (process.env.VITE_APPWRITE_COL_CONTACTS) {
-    await ensureCollectionPermissions(process.env.VITE_APPWRITE_COL_CONTACTS, ['read("users")','create("users")','update("users")','delete("users")']);
+    await ensureCollectionPermissions(process.env.VITE_APPWRITE_COL_CONTACTS, ['read("users")', 'create("users")', 'update("users")', 'delete("users")']);
   }
 
   // Optional: Users collection (used by Profile/Users pages)
@@ -212,7 +212,7 @@ async function setup() {
       ]
     );
     await createIndexIfMissing(process.env.VITE_APPWRITE_COL_USERS, 'email_eq', 'key', ['email']);
-    await ensureCollectionPermissions(process.env.VITE_APPWRITE_COL_USERS, ['read("users")','create("users")','update("users")','delete("users")']);
+    await ensureCollectionPermissions(process.env.VITE_APPWRITE_COL_USERS, ['read("users")', 'create("users")', 'update("users")', 'delete("users")']);
   }
 
   // Owner–Car–Driver model
@@ -232,7 +232,7 @@ async function setup() {
         { type: "datetime", key: "createdAt" },
       ]
     );
-    await ensureCollectionPermissions(process.env.VITE_APPWRITE_COL_CARS, ['read("users")','create("users")','update("users")','delete("users")']);
+    await ensureCollectionPermissions(process.env.VITE_APPWRITE_COL_CARS, ['read("users")', 'create("users")', 'update("users")', 'delete("users")']);
   }
 
   if (process.env.VITE_APPWRITE_COL_DRIVER_PROFILES) {
@@ -251,7 +251,7 @@ async function setup() {
         { type: "datetime", key: "createdAt" },
       ]
     );
-    await ensureCollectionPermissions(process.env.VITE_APPWRITE_COL_DRIVER_PROFILES, ['read("users")','create("users")','update("users")','delete("users")']);
+    await ensureCollectionPermissions(process.env.VITE_APPWRITE_COL_DRIVER_PROFILES, ['read("users")', 'create("users")', 'update("users")', 'delete("users")']);
   }
 
   if (process.env.VITE_APPWRITE_COL_ASSIGNMENTS) {
@@ -268,7 +268,7 @@ async function setup() {
         { type: "datetime", key: "endedAt" },
       ]
     );
-    await ensureCollectionPermissions(process.env.VITE_APPWRITE_COL_ASSIGNMENTS, ['read("users")','create("users")','update("users")','delete("users")']);
+    await ensureCollectionPermissions(process.env.VITE_APPWRITE_COL_ASSIGNMENTS, ['read("users")', 'create("users")', 'update("users")', 'delete("users")']);
   }
 
   if (process.env.VITE_APPWRITE_COL_DRIVER_RECORDS) {
@@ -284,7 +284,98 @@ async function setup() {
         { type: "datetime", key: "ts" },
       ]
     );
-    await ensureCollectionPermissions(process.env.VITE_APPWRITE_COL_DRIVER_RECORDS, ['read("users")','create("users")','update("users")','delete("users")']);
+    await ensureCollectionPermissions(process.env.VITE_APPWRITE_COL_DRIVER_RECORDS, ['read("users")', 'create("users")', 'update("users")', 'delete("users")']);
+  }
+
+  // ---------------------------------------------------------
+  // V2 New Architecture Collections
+  // ---------------------------------------------------------
+
+  // A) vehicle_state (latest live snapshot per car)
+  if (process.env.VITE_APPWRITE_COL_VEHICLE_STATE) {
+    await createCollectionWithAttributes(
+      process.env.VITE_APPWRITE_COL_VEHICLE_STATE,
+      "VehicleState",
+      [
+        { type: "string", key: "carId", required: true },
+        { type: "string", key: "driverId", required: false }, // Can be null if no driver assigned
+        { type: "integer", key: "speed", defaultValue: 0 },
+        { type: "string", key: "alcoholStatus", defaultValue: "normal" }, // normal / detected
+        { type: "string", key: "drowsinessLevel", defaultValue: "normal" }, // normal / warning / critical
+        { type: "integer", key: "heartRate", defaultValue: 0 },
+        { type: "float", key: "location_lat", defaultValue: 0.0 },
+        { type: "float", key: "location_lng", defaultValue: 0.0 },
+        { type: "string", key: "controlMode", defaultValue: "driver" }, // driver / owner
+        { type: "datetime", key: "lastUpdated" }, // critical state change time
+      ]
+    );
+    // Index for fast lookup of live cars
+    await createIndexIfMissing(process.env.VITE_APPWRITE_COL_VEHICLE_STATE, 'car_unique', 'unique', ['carId']);
+    await ensureCollectionPermissions(process.env.VITE_APPWRITE_COL_VEHICLE_STATE, ['read("users")', 'create("users")', 'update("users")', 'delete("users")']);
+  }
+
+  // B) events_log (event-based storage)
+  if (process.env.VITE_APPWRITE_COL_EVENTS_LOG) {
+    await createCollectionWithAttributes(
+      process.env.VITE_APPWRITE_COL_EVENTS_LOG,
+      "EventsLog",
+      [
+        { type: "string", key: "eventType", required: true }, // DROWSINESS_WARNING, OVERSPEED, etc.
+        { type: "string", key: "severity", required: true }, // info / warning / critical
+        { type: "string", key: "carId", required: true },
+        { type: "string", key: "driverId", required: false },
+
+        // Snapshot data
+        { type: "integer", key: "snap_speed" },
+        { type: "integer", key: "snap_alcoholLevel" },
+        { type: "integer", key: "snap_heartRate" },
+        { type: "float", key: "snap_location_lat" },
+        { type: "float", key: "snap_location_lng" },
+
+        { type: "datetime", key: "timestamp", required: true },
+      ]
+    );
+    await createIndexIfMissing(process.env.VITE_APPWRITE_COL_EVENTS_LOG, 'car_events', 'key', ['carId', 'timestamp'], ['DESC']);
+    await ensureCollectionPermissions(process.env.VITE_APPWRITE_COL_EVENTS_LOG, ['read("users")', 'create("users")', 'update("users")', 'delete("users")']);
+  }
+
+  // C) driver_sessions (trip-based history)
+  if (process.env.VITE_APPWRITE_COL_DRIVER_SESSIONS) {
+    await createCollectionWithAttributes(
+      process.env.VITE_APPWRITE_COL_DRIVER_SESSIONS,
+      "DriverSessions",
+      [
+        { type: "string", key: "driverId", required: true },
+        { type: "string", key: "carId", required: true },
+        { type: "datetime", key: "sessionStart", required: true },
+        { type: "datetime", key: "sessionEnd", required: false }, // Null means active
+        { type: "integer", key: "maxSpeed", defaultValue: 0 },
+        { type: "integer", key: "drowsinessWarningsCount", defaultValue: 0 },
+        { type: "integer", key: "alcoholIncidentsCount", defaultValue: 0 },
+        { type: "integer", key: "ownerInterventionsCount", defaultValue: 0 },
+      ]
+    );
+    await createIndexIfMissing(process.env.VITE_APPWRITE_COL_DRIVER_SESSIONS, 'active_session', 'key', ['driverId', 'sessionEnd']);
+    await ensureCollectionPermissions(process.env.VITE_APPWRITE_COL_DRIVER_SESSIONS, ['read("users")', 'create("users")', 'update("users")', 'delete("users")']);
+  }
+
+  // D) emergency_cases (track unresolved/resolved)
+  if (process.env.VITE_APPWRITE_COL_EMERGENCY_CASES) {
+    await createCollectionWithAttributes(
+      process.env.VITE_APPWRITE_COL_EMERGENCY_CASES,
+      "EmergencyCases",
+      [
+        { type: "string", key: "caseType", required: true }, // Alcohol / Drowsiness / HeartRate
+        { type: "string", key: "carId", required: true },
+        { type: "string", key: "driverId", required: false },
+        { type: "boolean", key: "resolved", defaultValue: false },
+        { type: "string", key: "ownerActionTaken" },
+        { type: "datetime", key: "createdAt", required: true },
+        { type: "datetime", key: "resolvedAt" },
+      ]
+    );
+    await createIndexIfMissing(process.env.VITE_APPWRITE_COL_EMERGENCY_CASES, 'unresolved_cases', 'key', ['resolved', 'createdAt'], ['ASC']);
+    await ensureCollectionPermissions(process.env.VITE_APPWRITE_COL_EMERGENCY_CASES, ['read("users")', 'create("users")', 'update("users")', 'delete("users")']);
   }
 
   console.log("🎉 Setup complete.");

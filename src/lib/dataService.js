@@ -1,6 +1,6 @@
 import { ID, Query } from "appwrite";
 import { databases } from "./appwrite";
-import { DB_ID, COL_ALERTS, COL_SENSORS, COL_LOCATIONS, COL_CONTACTS, COL_USERS, COL_CARS, COL_DRIVER_PROFILES, COL_ASSIGNMENTS, COL_DRIVER_RECORDS, assertCollections } from "./collections";
+import { DB_ID, COL_ALERTS, COL_SENSORS, COL_LOCATIONS, COL_CONTACTS, COL_USERS, COL_CARS, COL_DRIVER_PROFILES, COL_ASSIGNMENTS, COL_DRIVER_RECORDS, COL_VEHICLE_STATE, COL_EVENTS_LOG, COL_DRIVER_SESSIONS, COL_EMERGENCY_CASES, assertCollections } from "./collections";
 
 export async function seedMockData() {
   assertCollections();
@@ -196,4 +196,36 @@ export async function listDriverRecords({ driverProfileId, limit = 200 } = {}) {
 }
 export async function addDriverRecord(doc) {
   return databases.createDocument(DB_ID, COL_DRIVER_RECORDS, ID.unique(), doc);
+}
+
+// ----------------------------------------------------------------------
+// V2 New Architecture Services
+// ----------------------------------------------------------------------
+
+export async function listVehicleStates() {
+  const res = await databases.listDocuments(DB_ID, COL_VEHICLE_STATE, [Query.limit(100)]);
+  return res.documents;
+}
+
+export async function listEventsLog({ carId, driverId, limit = 50 } = {}) {
+  const queries = [Query.orderDesc('timestamp'), Query.limit(limit)];
+  if (carId) queries.push(Query.equal('carId', carId));
+  if (driverId) queries.push(Query.equal('driverId', driverId));
+  const res = await databases.listDocuments(DB_ID, COL_EVENTS_LOG, queries);
+  return res.documents;
+}
+
+export async function listDriverSessions({ driverId, carId, limit = 50 } = {}) {
+  const queries = [Query.orderDesc('sessionStart'), Query.limit(limit)];
+  if (driverId) queries.push(Query.equal('driverId', driverId));
+  if (carId) queries.push(Query.equal('carId', carId));
+  const res = await databases.listDocuments(DB_ID, COL_DRIVER_SESSIONS, queries);
+  return res.documents;
+}
+
+export async function listEmergencyCases({ resolved, limit = 50 } = {}) {
+  const queries = [Query.orderDesc('createdAt'), Query.limit(limit)];
+  if (typeof resolved === 'boolean') queries.push(Query.equal('resolved', resolved));
+  const res = await databases.listDocuments(DB_ID, COL_EMERGENCY_CASES, queries);
+  return res.documents;
 }

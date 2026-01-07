@@ -8,6 +8,10 @@ export const COL_CARS = import.meta.env.VITE_APPWRITE_COL_CARS;
 export const COL_DRIVER_PROFILES = import.meta.env.VITE_APPWRITE_COL_DRIVER_PROFILES;
 export const COL_ASSIGNMENTS = import.meta.env.VITE_APPWRITE_COL_ASSIGNMENTS;
 export const COL_DRIVER_RECORDS = import.meta.env.VITE_APPWRITE_COL_DRIVER_RECORDS;
+export const COL_VEHICLE_STATE = import.meta.env.VITE_APPWRITE_COL_VEHICLE_STATE;
+export const COL_EVENTS_LOG = import.meta.env.VITE_APPWRITE_COL_EVENTS_LOG;
+export const COL_DRIVER_SESSIONS = import.meta.env.VITE_APPWRITE_COL_DRIVER_SESSIONS;
+export const COL_EMERGENCY_CASES = import.meta.env.VITE_APPWRITE_COL_EMERGENCY_CASES;
 
 export function assertCollections() {
   const missing = [];
