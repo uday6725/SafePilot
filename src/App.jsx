@@ -4,6 +4,7 @@ import { client } from "./lib/appwrite";
 import { AppwriteException } from "appwrite";
 import AppwriteSvg from "../public/appwrite.svg";
 import ReactSvg from "../public/react.svg";
+import ESP32Camera from "./components/ESP32Camera";
 
 function App() {
   const [detailHeight, setDetailHeight] = useState(55);
@@ -152,6 +153,11 @@ function App() {
           <span className="text-white">Send a ping</span>
         </button>
       </section>
+
+      <div className="w-full max-w-4xl mb-12">
+        <h2 className="text-2xl font-light text-[#2D2D31] mb-6 text-center">Live Security Feed</h2>
+        <ESP32Camera />
+      </div>
 
       <div className="grid grid-rows-3 gap-7 lg:grid-cols-3 lg:grid-rows-none">
         <div className="flex h-full w-72 flex-col gap-2 rounded-md border border-[#EDEDF0] bg-white p-4">
